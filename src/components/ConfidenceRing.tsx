@@ -26,7 +26,12 @@ export function ConfidenceRing({
 
   return (
     <div className={cn("flex flex-col items-center gap-1", className)}>
-      <div className="relative" style={{ width: size, height: size }}>
+      <div
+        className="relative"
+        style={{ width: size, height: size }}
+        role="img"
+        aria-label={`${value}% confidence, ${confidenceLabel(value).toLowerCase()}`}
+      >
         <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
           <circle
             cx={size / 2}
@@ -52,10 +57,11 @@ export function ConfidenceRing({
             transition={{ duration: 0.8, ease: "easeOut" }}
           />
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span
-            className={cn("font-display font-bold", size >= 100 ? "text-3xl" : "text-base")}
-          >
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center"
+          aria-hidden="true"
+        >
+          <span className={cn("font-display font-bold", size >= 100 ? "text-3xl" : "text-base")}>
             {value}%
           </span>
         </div>

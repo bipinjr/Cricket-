@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { SearchX } from "lucide-react";
+import { ArrowLeftRight, Lightbulb, RotateCcw, Search, SearchX } from "lucide-react";
 import { ActionButton } from "@/components/ActionButton";
 import { ConfidenceRing } from "@/components/ConfidenceRing";
 import { CONFIDENCE_THRESHOLD, type MatchCandidate } from "@/lib/matching";
@@ -46,19 +46,39 @@ export function ResultsPanel({
     <div className="space-y-7">
       <div className="relative">
         {matched && best.confidence > 90 && <Burst />}
-        <div className="glass sheen grid gap-7 rounded-3xl p-8 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center border border-accent/20">
-          <div className="flex min-w-0 items-center gap-6">
-            <motion.div
-              layoutId="subject-photo"
-              className="relative shrink-0"
-            >
-              <img
-                src={imageUrl}
-                alt="The photo you uploaded"
-                className="size-24 rounded-3xl object-cover sm:size-32 ring-2 ring-accent/30"
-              />
-              {matched && <div className="absolute inset-0 rounded-3xl shadow-lg shadow-cyan-500/40" />}
-            </motion.div>
+        <div className="glass grid gap-7 rounded-3xl border border-accent/20 p-6 sm:p-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div className="flex min-w-0 flex-col gap-6 sm:flex-row sm:items-center">
+            <div className="flex shrink-0 items-center gap-3">
+              <motion.figure layoutId="subject-photo" className="relative">
+                <img
+                  src={imageUrl}
+                  alt="The photo you uploaded"
+                  className="size-24 rounded-3xl object-cover ring-2 ring-accent/30 sm:size-28"
+                />
+                <figcaption className="mt-1.5 text-center text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+                  Your photo
+                </figcaption>
+              </motion.figure>
+              {matched && best.player.photoUrl && (
+                <>
+                  <ArrowLeftRight className="mb-5 size-5 text-accent" aria-hidden="true" />
+                  <motion.figure
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2, duration: 0.35, ease: "easeOut" }}
+                  >
+                    <img
+                      src={best.player.photoUrl}
+                      alt={`Reference photo of ${best.player.name}`}
+                      className="size-24 rounded-3xl object-cover ring-2 ring-accent/30 sm:size-28"
+                    />
+                    <figcaption className="mt-1.5 text-center text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+                      Reference
+                    </figcaption>
+                  </motion.figure>
+                </>
+              )}
+            </div>
             <div className="min-w-0">
               {matched ? (
                 <motion.div
@@ -69,7 +89,7 @@ export function ResultsPanel({
                   <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
                     Identified as
                   </p>
-                  <h2 className="font-display truncate text-3xl font-bold sm:text-4xl">
+                  <h2 className="font-display text-3xl font-bold text-balance sm:text-4xl">
                     {best.player.name}
                   </h2>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
@@ -92,7 +112,7 @@ export function ResultsPanel({
                 </motion.div>
               ) : (
                 <div>
-                  <SearchX className="mb-2 size-8 text-muted-foreground" />
+                  <SearchX className="mb-2 size-8 text-muted-foreground" aria-hidden="true" />
                   <h2 className="font-display text-2xl font-bold sm:text-3xl">
                     We couldn't find a confident match
                   </h2>
@@ -104,23 +124,28 @@ export function ResultsPanel({
               )}
             </div>
           </div>
-          {matched && <ConfidenceRing value={best.confidence} />}
+          {matched && <ConfidenceRing value={best.confidence} className="justify-self-center" />}
         </div>
       </div>
 
       {alternates.length > 0 && (
         <section aria-label="Other possible matches" className="pt-2">
-          <h3 className="mb-4 text-xs font-bold tracking-widest text-muted-foreground">
-            {matched ? "💡 COULD ALSO BE…" : "🔍 CLOSEST MATCHES"}
+          <h3 className="mb-4 flex items-center gap-2 text-xs font-bold tracking-widest text-muted-foreground uppercase">
+            {matched ? (
+              <Lightbulb className="size-4 text-warning" aria-hidden="true" />
+            ) : (
+              <Search className="size-4 text-accent" aria-hidden="true" />
+            )}
+            {matched ? "Could also be…" : "Closest matches"}
           </h3>
-          <div className="flex gap-4 overflow-x-auto pb-3">
+          <div className="-mx-1 flex snap-x gap-4 overflow-x-auto px-1 pb-3 sm:grid sm:grid-cols-3 sm:overflow-visible">
             {alternates.map((candidate, index) => (
               <motion.article
                 key={candidate.player.id}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="glass sheen w-44 shrink-0 rounded-3xl p-5 text-center border border-accent/10 hover:border-accent/30 transition-all hover:shadow-lg hover:shadow-cyan-500/10"
+                className="glass w-44 shrink-0 snap-start rounded-3xl border border-accent/10 p-5 text-center sm:w-auto"
               >
                 {candidate.player.photoUrl ? (
                   <img
@@ -132,7 +157,12 @@ export function ResultsPanel({
                 ) : (
                   <div className="shimmer mx-auto size-24 rounded-full" />
                 )}
-                <p className="mt-4 truncate text-sm font-bold text-foreground">{candidate.player.name}</p>
+                <p className="mt-4 truncate text-sm font-bold text-foreground">
+                  {candidate.player.name}
+                </p>
+                {candidate.player.role && (
+                  <p className="truncate text-xs text-muted-foreground">{candidate.player.role}</p>
+                )}
                 <ConfidenceRing
                   value={candidate.confidence}
                   size={72}
@@ -145,10 +175,14 @@ export function ResultsPanel({
         </section>
       )}
 
-      <div className="flex justify-center pt-4">
+      <div className="flex flex-col items-center gap-3 pt-4">
         <ActionButton variant="accent" size="lg" onClick={onReset}>
-          🔄 Try Another Image
+          <RotateCcw className="size-4" aria-hidden="true" />
+          Try Another Image
         </ActionButton>
+        <p className="text-center text-xs text-muted-foreground">
+          Not who you expected? A sharper, front-facing photo usually gives a better match.
+        </p>
       </div>
     </div>
   );

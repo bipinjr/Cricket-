@@ -54,35 +54,48 @@ export function Dropzone({
       <motion.button
         type="button"
         onClick={() => inputRef.current?.click()}
-        whileTap={{ scale: 0.97 }}
-        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
         className={cn(
-          "glass flex w-full cursor-pointer flex-col items-center justify-center gap-5 rounded-3xl px-6 py-16 text-center transition-all duration-300",
-          dragging ? "border-transparent bg-secondary shadow-lg shadow-cyan-500/30" : "border-2 border-dashed border-accent/40 hover:border-accent/60 hover:shadow-lg hover:shadow-cyan-500/20",
-          !dragging && "breathe",
+          "group glass flex w-full cursor-pointer flex-col items-center justify-center gap-5 rounded-3xl px-6 py-12 text-center transition-[border-color,box-shadow,background-color] duration-300 sm:py-16",
+          dragging
+            ? "border-2 border-transparent bg-secondary shadow-[0_0_60px_-12px_var(--accent)]"
+            : "border-2 border-dashed border-accent/40 hover:border-accent/70 hover:shadow-[0_0_50px_-16px_var(--accent)]",
         )}
         aria-label="Upload a cricketer's photo"
+        aria-describedby="dropzone-hint"
       >
         <motion.span
           animate={dragging ? { y: [-6, 4, -6] } : { y: 0 }}
           transition={{ repeat: dragging ? Infinity : 0, duration: 0.8 }}
-          className="flex size-20 items-center justify-center rounded-3xl bg-gradient-to-br from-accent/20 to-accent/10 border border-accent/40 text-accent transition-all"
+          className="flex size-20 items-center justify-center rounded-3xl bg-gradient-to-br from-accent/20 to-accent/10 border border-accent/40 text-accent transition-transform duration-300 group-hover:-translate-y-1"
         >
-          {dragging ? <Upload className="size-8" strokeWidth={1.5} /> : <ImagePlus className="size-8" strokeWidth={1.5} />}
+          {dragging ? (
+            <Upload className="size-8" strokeWidth={1.5} />
+          ) : (
+            <ImagePlus className="size-8" strokeWidth={1.5} />
+          )}
         </motion.span>
         <span className="space-y-1">
           <p className="font-display text-2xl font-bold">
             {dragging ? "Drop the photo here" : "Upload a Cricket Photo"}
           </p>
-          <p className="text-sm text-muted-foreground">
-            JPG, PNG or WebP · up to 10 MB
-          </p>
-          <p className="text-xs text-muted-foreground opacity-75">
-            One clear face works best for accurate identification
+          <p className="text-sm text-muted-foreground">JPG, PNG or WebP · up to 10 MB</p>
+          <p id="dropzone-hint" className="text-sm text-muted-foreground">
+            One clear, front-facing face works best
           </p>
         </span>
-        <span className="text-sm text-accent font-medium underline decoration-dotted underline-offset-4 hover:no-underline">
-          or click to browse
+        <span className="inline-flex min-h-11 items-center rounded-full px-6 text-sm font-semibold text-accent-foreground [background-image:var(--gradient-cta)] shadow-[0_10px_30px_-10px_var(--accent)]">
+          Choose a photo
+        </span>
+        <span className="hidden text-xs text-muted-foreground sm:block">
+          or drag it here · or paste with{" "}
+          <kbd className="rounded-md border border-border bg-secondary px-1.5 py-0.5 font-sans text-[11px]">
+            Ctrl
+          </kbd>{" "}
+          +{" "}
+          <kbd className="rounded-md border border-border bg-secondary px-1.5 py-0.5 font-sans text-[11px]">
+            V
+          </kbd>
         </span>
       </motion.button>
       <input

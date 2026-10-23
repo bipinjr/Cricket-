@@ -1,15 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Cpu,
+  ScanSearch,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ActionButton } from "@/components/ActionButton";
-import { Dropzone } from "@/components/Dropzone";
+import { Dropzone, validateImageFile } from "@/components/Dropzone";
 import { FacePreview } from "@/components/FacePreview";
+import { HowItWorks } from "@/components/HowItWorks";
 import { Logo } from "@/components/Logo";
 import { ProcessingPanel } from "@/components/ProcessingPanel";
 import { ResultsPanel } from "@/components/ResultsPanel";
+import { StepIndicator } from "@/components/StepIndicator";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { cn } from "@/lib/utils";
 import {
   detectFaces,
   loadFaceEngine,
@@ -29,7 +41,10 @@ export const Route = createFileRoute("/")({
         content:
           "Upload a photo and identify Indian cricket players in seconds, with a confidence score. Runs entirely in your browser.",
       },
-      { property: "og:title", content: "Who's That Cricketer? Face Recognition for Indian Cricket" },
+      {
+        property: "og:title",
+        content: "Who's That Cricketer? Face Recognition for Indian Cricket",
+      },
       {
         property: "og:description",
         content:
@@ -43,6 +58,13 @@ export const Route = createFileRoute("/")({
 });
 
 type Screen = "upload" | "preview" | "processing" | "results";
+
+const STEP_FOR_SCREEN: Record<Screen, number> = {
+  upload: 0,
+  preview: 1,
+  processing: 2,
+  results: 3,
+};
 
 const fade = {
   initial: { opacity: 0, y: 16 },
@@ -60,16 +82,22 @@ function Home() {
   const [step, setStep] = useState(0);
   const [candidates, setCandidates] = useState<MatchCandidate[]>([]);
   const [scanning, setScanning] = useState(false);
+  const [engine, setEngine] = useState<"loading" | "ready" | "error">("loading");
   const objectUrlRef = useRef<string | null>(null);
 
-  const { data: players, isLoading: playersLoading, error: playersError } = useQuery(
-    playersQueryOptions,
-  );
+  const {
+    data: players,
+    isLoading: playersLoading,
+    error: playersError,
+  } = useQuery(playersQueryOptions);
 
   useEffect(() => {
-    loadFaceEngine().catch(() => {
-      toast.error("The recognition model could not be loaded. Please refresh the page.");
-    });
+    loadFaceEngine()
+      .then(() => setEngine("ready"))
+      .catch(() => {
+        setEngine("error");
+        toast.error("The recognition model could not be loaded. Please refresh the page.");
+      });
   }, []);
 
   useEffect(() => {
@@ -108,6 +136,23 @@ function Home() {
     },
     [analyseImage],
   );
+
+  // Let people paste a screenshot or copied image straight onto the upload screen.
+  useEffect(() => {
+    if (screen !== "upload") return;
+    const onPaste = (event: ClipboardEvent) => {
+      const file = Array.from(event.clipboardData?.files ?? []).find((f) =>
+        f.type.startsWith("image/"),
+      );
+      if (!file) return;
+      event.preventDefault();
+      const error = validateImageFile(file);
+      if (error) toast.error(error);
+      else void handleFile(file);
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [screen, handleFile]);
 
   const handleSample = useCallback(
     async (url: string) => {
@@ -178,26 +223,74 @@ function Home() {
               </p>
             </div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-3">
+            <span
+              role="status"
+              className={cn(
+                "hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium sm:inline-flex",
+                engine === "error" ? "text-destructive" : "text-muted-foreground",
+              )}
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "size-2 rounded-full",
+                  engine === "ready" && "bg-success",
+                  engine === "loading" && "animate-pulse bg-warning",
+                  engine === "error" && "bg-destructive",
+                )}
+              />
+              {engine === "ready"
+                ? "AI ready"
+                : engine === "loading"
+                  ? "Loading AI model…"
+                  : "AI unavailable"}
+            </span>
+            <ThemeToggle />
+          </div>
         </header>
+
+        {screen !== "upload" && (
+          <div className="pt-2 pb-4">
+            <StepIndicator current={STEP_FOR_SCREEN[screen]} />
+          </div>
+        )}
 
         <main className="flex flex-1 flex-col justify-center py-6">
           <AnimatePresence mode="wait">
             {screen === "upload" && (
               <motion.section key="upload" {...fade} className="space-y-10">
-                <div className="text-center space-y-4">
-                  <h2 className="font-display text-5xl sm:text-6xl font-bold tracking-tight">
-                    <span className="block">Who's That</span>
-                    <span className="gradient-text block mt-2">Cricketer?</span>
-                  </h2>
-                  <p className="mx-auto max-w-xl text-base text-muted-foreground leading-relaxed">
-                    Upload a photo and let our AI identify the Indian cricket player with precision confidence scoring — all processed privately on your device.
+                <div className="space-y-5 text-center">
+                  <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-xs font-semibold text-accent">
+                    <ScanSearch className="size-3.5" aria-hidden="true" />
+                    Face recognition for Indian cricket
                   </p>
+                  <h2 className="font-display text-5xl font-bold tracking-tight text-balance sm:text-7xl">
+                    <span className="block">Who's That</span>
+                    <span className="gradient-text mt-1 block pb-1">Cricketer?</span>
+                  </h2>
+                  <p className="mx-auto max-w-xl text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg">
+                    Drop in a photo and get the player's name with a confidence score in seconds.
+                  </p>
+                  <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+                    <li className="inline-flex items-center gap-2">
+                      <ShieldCheck className="size-4 text-success" aria-hidden="true" />
+                      Private, on-device
+                    </li>
+                    <li className="inline-flex items-center gap-2">
+                      <Cpu className="size-4 text-accent" aria-hidden="true" />
+                      No sign-up
+                    </li>
+                    <li className="inline-flex items-center gap-2">
+                      <Users className="size-4 text-accent" aria-hidden="true" />
+                      {players ? `${players.length} players` : "Loading players…"}
+                    </li>
+                  </ul>
                 </div>
                 <Dropzone onFile={handleFile} onError={(m) => toast.error(m)} />
                 <div className="space-y-4">
-                  <p className="text-center text-xs tracking-widest text-muted-foreground">
-                    EXPLORE WITH SAMPLE PHOTOS
+                  <p className="text-center text-xs font-bold tracking-[0.2em] text-muted-foreground uppercase">
+                    Or try a sample
                   </p>
                   <div className="flex flex-wrap justify-center gap-4">
                     {playersLoading &&
@@ -209,18 +302,26 @@ function Home() {
                         key={player.id}
                         type="button"
                         onClick={() => handleSample(player.photoUrl!)}
-                        className="size-20 overflow-hidden rounded-3xl border-2 border-transparent transition-all hover:border-accent hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-110"
+                        className="group flex w-20 flex-col items-center gap-2 rounded-3xl"
                         aria-label={`Try the sample photo of ${player.name}`}
                       >
-                        <img
-                          src={player.photoUrl!}
-                          alt={player.name}
-                          loading="lazy"
-                          className="size-full object-cover"
-                        />
+                        <span className="block size-20 overflow-hidden rounded-3xl border-2 border-transparent transition-[border-color,box-shadow,transform] duration-200 group-hover:-translate-y-1 group-hover:border-accent group-hover:shadow-[0_12px_30px_-10px_var(--accent)]">
+                          <img
+                            src={player.photoUrl!}
+                            alt=""
+                            loading="lazy"
+                            className="size-full object-cover"
+                          />
+                        </span>
+                        <span className="w-full truncate text-center text-xs text-muted-foreground transition-colors group-hover:text-foreground">
+                          {player.shortName ?? player.name}
+                        </span>
                       </button>
                     ))}
                   </div>
+                </div>
+                <div className="pt-6">
+                  <HowItWorks players={players ?? []} />
                 </div>
               </motion.section>
             )}
@@ -235,23 +336,48 @@ function Home() {
                   onSelect={setSelectedFace}
                   scanning={scanning}
                 />
-                <p className="text-center text-sm text-muted-foreground font-medium" aria-live="polite">
-                  {faces.length === 0
-                    ? "⚠️ No face detected — try another photo."
-                    : faces.length === 1
-                      ? "✓ Face detected and ready to analyse."
-                      : `✓ ${faces.length} faces detected — tap the one you want identified.`}
+                <p
+                  className={cn(
+                    "flex items-center justify-center gap-2 text-center text-sm font-medium",
+                    scanning
+                      ? "text-muted-foreground"
+                      : faces.length === 0
+                        ? "text-warning"
+                        : "text-success",
+                  )}
+                  aria-live="polite"
+                >
+                  {scanning ? (
+                    <>
+                      <ScanSearch className="size-4 animate-pulse" aria-hidden="true" />
+                      Looking for faces…
+                    </>
+                  ) : faces.length === 0 ? (
+                    <>
+                      <AlertTriangle className="size-4" aria-hidden="true" />
+                      No face detected — try another photo.
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="size-4" aria-hidden="true" />
+                      {faces.length === 1
+                        ? "Face detected and ready to analyse."
+                        : `${faces.length} faces detected — tap the one you want identified.`}
+                    </>
+                  )}
                 </p>
                 <div className="flex flex-col-reverse items-center justify-center gap-4 sm:flex-row">
                   <ActionButton variant="ghost" onClick={reset}>
+                    <ArrowLeft className="size-4" aria-hidden="true" />
                     Choose Different Image
                   </ActionButton>
                   <ActionButton
                     variant="accent"
                     size="lg"
                     onClick={runMatch}
-                    disabled={faces.length === 0}
+                    disabled={scanning || faces.length === 0}
                   >
+                    <ScanSearch className="size-5" aria-hidden="true" />
                     Identify Player
                   </ActionButton>
                 </div>
@@ -281,8 +407,16 @@ function Home() {
           </AnimatePresence>
         </main>
 
-        <footer className="pt-6 pb-2 text-center text-xs text-muted-foreground border-t border-border/40">
-          ✨ Powered by on-device AI • Reference photos from Wikimedia Commons
+        <footer className="mt-10 border-t border-border/60 pt-6 pb-2 text-center text-xs text-muted-foreground">
+          Recognition runs on your device · Reference photos from{" "}
+          <a
+            href="https://commons.wikimedia.org"
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-dotted underline-offset-4 hover:text-foreground"
+          >
+            Wikimedia Commons
+          </a>
         </footer>
       </div>
     </>
